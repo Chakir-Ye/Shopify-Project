@@ -119,6 +119,18 @@ Si ça reste bloqué sur "on confirme ton paiement", vérifie que la commande
   fois : table `admins` (contrepartie base de `ADMIN_EMAILS`) et
   réécriture des policies concernées pour accepter "actif OU admin" de
   façon unifiée, au lieu de contourner la RLS au cas par cas côté code.
+- `supabase/migration-08-visibilite-croisee.sql` — à coller ensuite,
+  une seule fois : corrige un bug où chaque membre ne voyait que ses
+  propres marchandises sur `/marchandises` au lieu de voir toutes
+  celles du cercle. Cause : les policies RLS vérifiaient "vendeur actif
+  ou admin" via une sous-requête sur `abonnes`/`admins`, mais ces deux
+  tables sont elles-mêmes protégées par RLS — une sous-requête reste
+  soumise à la RLS de la table qu'elle interroge, donc elle ne
+  trouvait jamais la ligne d'un AUTRE membre. Corrigé avec une fonction
+  `private.est_actif_ou_admin(id)` en `security definer` (contourne la
+  RLS pour cette seule vérification, sans exposer `abonnes`/`admins`
+  nulle part : le schéma `private` n'est pas exposé par l'API
+  Supabase).
 - `src/app/inscription` — page de création de compte.
 - `src/app/connexion` — page de connexion.
 - `src/app/api/checkout` — crée la session de paiement Stripe.
