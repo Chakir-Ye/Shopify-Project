@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
 import {
   recupererMarchandiseParId,
   genererUrlSigneePhoto,
@@ -9,6 +10,7 @@ import {
   libelleEtat,
   formaterPrix,
 } from "@/lib/marchandises";
+import BoutonContacterVendeur from "@/components/bouton-contacter-vendeur";
 
 function Detail({ titre, valeur }: { titre: string; valeur: string }) {
   return (
@@ -25,11 +27,17 @@ export default async function MarchandiseDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   const marchandise = await recupererMarchandiseParId(id);
 
   if (!marchandise) {
     notFound();
   }
+
+  const estLeVendeur = marchandise.vendeur_id === user?.id;
 
   const urlsPhotos = (
     await Promise.all(
@@ -102,8 +110,13 @@ export default async function MarchandiseDetailPage({
           </p>
           <p className="mt-1 text-sm text-dim">
             L&apos;identité du vendeur ne se révèle que dans le cadre d&apos;un
-            échange initié via la messagerie — bientôt disponible.
+            échange initié via la messagerie.
           </p>
+          {!estLeVendeur && marchandise.statut === "publiee" && (
+            <div className="mt-4">
+              <BoutonContacterVendeur marchandiseId={marchandise.id} />
+            </div>
+          )}
         </div>
       </div>
     </main>
