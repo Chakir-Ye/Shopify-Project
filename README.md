@@ -121,6 +121,25 @@ Si ça reste bloqué sur "on confirme ton paiement", vérifie que la commande
   façon unifiée, au lieu de contourner la RLS au cas par cas côté code.
 - `supabase/migration-07-messagerie.sql` — à coller ensuite, une seule
   fois : tables `conversations` et `messages` (Brique 5).
+- `supabase/migration-08-visibilite-croisee.sql` — à coller ensuite,
+  une seule fois : corrige un bug où chaque membre ne voyait que ses
+  propres marchandises sur `/marchandises` au lieu de voir toutes
+  celles du cercle. Cause : les policies RLS vérifiaient "vendeur actif
+  ou admin" via une sous-requête sur `abonnes`/`admins`, mais ces deux
+  tables sont elles-mêmes protégées par RLS — une sous-requête reste
+  soumise à la RLS de la table qu'elle interroge, donc elle ne
+  trouvait jamais la ligne d'un AUTRE membre. Corrigé avec une fonction
+  `private.est_actif_ou_admin(id)` en `security definer` (contourne la
+  RLS pour cette seule vérification, sans exposer `abonnes`/`admins`
+  nulle part : le schéma `private` n'est pas exposé par l'API
+  Supabase).
+- `supabase/migration-09-messagerie-visibilite-croisee.sql` — à coller
+  ensuite, une seule fois : même bug que migration-08, mais sur
+  `conversations`/`messages` (empêchait de démarrer une conversation
+  avec un autre vendeur). Réutilise `private.est_actif_ou_admin`, et
+  ajoute `private.est_admin` (admin strict, sans le "ou actif") pour
+  la vue modération, afin qu'un membre actif ordinaire ne puisse
+  jamais lire une conversation à laquelle il ne participe pas.
 - `src/app/inscription` — page de création de compte.
 - `src/app/connexion` — page de connexion.
 - `src/app/api/checkout` — crée la session de paiement Stripe.
